@@ -1,4 +1,3 @@
-
 # QuackReports 
 
 *QuackReports* is a robust, open-source toolkit for creating custom reporting engines. 🦆
@@ -22,15 +21,15 @@ pip install quackreports
 
 ## Quick Start
 
-In this quick start guide, we'll create both a static and a dynamic sales report using the same dataset and business scenario. This will help you understand how to build upon a static report to make it dynamic with *QuackReports*.
+In this guide, we'll show you how to use **QuackReports** to create both static and dynamic sales reports based on a sample dataset. You'll start by creating a static report and then enhance it to be dynamic, allowing for customized reports based on user input.
 
 ### Business Scenario
 
-Imagine you're an analyst at a retail company, and you need to generate sales reports. You have sales data for different regions over several months. Initially, you need a static report summarizing overall sales. Later, you want to generate customized reports for specific regions and months dynamically.
+Imagine you're an analyst at a retail company tasked with generating sales reports. You have sales data for different regions over several months. Initially, you need a static report summarizing overall sales. Later, you want to generate customized reports for specific regions and months dynamically.
 
-### Dataset
+### Sample Dataset
 
-We'll use the following sample sales data:
+First, let's create a sample dataset using pandas:
 
 ```python
 import pandas as pd
@@ -39,24 +38,66 @@ import pandas as pd
 data = {
     "Region": ["North", "South", "East", "West"] * 3,
     "Month": ["January"] * 4 + ["February"] * 4 + ["March"] * 4,
-    "Total Sales": [15000, 12000, 13000, 14000, 16000, 11000, 15000, 13000, 17000, 12500, 16000, 13500],
-    "Units Sold": [300, 240, 260, 280, 320, 220, 300, 260, 340, 250, 320, 270],
-    "Profit": [4500, 3600, 3900, 4200, 4800, 3300, 4500, 3900, 5100, 3750, 4800, 4050]
+    "Total Sales": [
+        15000, 12000, 13000, 14000,
+        16000, 11000, 15000, 13000,
+        17000, 12500, 16000, 13500
+    ],
+    "Units Sold": [
+        300, 240, 260, 280,
+        320, 220, 300, 260,
+        340, 250, 320, 270
+    ],
+    "Profit": [
+        4500, 3600, 3900, 4200,
+        4800, 3300, 4500, 3900,
+        5100, 3750, 4800, 4050
+    ]
 }
 df = pd.DataFrame(data)
 ```
 
-### Static Report Engine
+Our dataframe now looks like this:
 
-First, we'll create a static sales report that includes a cover page, a sales data table, and a sales trend plot.
+| Region | Month    | Total Sales | Units Sold | Profit |
+|--------|----------|-------------|------------|--------|
+| North  | January  | 15000       | 300        | 4500   |
+| South  | January  | 12000       | 240        | 3600   |
+| East   | January  | 13000       | 260        | 3900   |
+| West   | January  | 14000       | 280        | 4200   |
+| North  | February | 16000       | 320        | 4800   |
+| South  | February | 11000       | 220        | 3300   |
+| East   | February | 15000       | 300        | 4500   |
+| West   | February | 13000       | 260        | 3900   |
+| North  | March    | 17000       | 340        | 5100   |
+| South  | March    | 12500       | 250        | 3750   |
+| East   | March    | 16000       | 320        | 4800   |
+| West   | March    | 13500       | 270        | 4050   |
+    
+
+---
+
+### Creating a Static Report
+
+We'll start by creating a static sales report that includes:
+
+- **Cover Page**: Company logo and report title.
+- **Sales Data Table**: Detailed sales figures.
+- **Sales Trend Plot**: Visualization of total sales over months.
+
+#### Step 1: Import Libraries
 
 ```python
 import matplotlib.pyplot as plt
 from quackreports import ReportEngine, Report
 from quackreports.elements import Image, Text, Table, Plot
+```
 
-# Elements for the Cover Page
-logo = Image("logo.png", dim=(100, 100))
+#### Step 2: Define Report Elements
+
+```python
+# Cover Page Elements
+logo = Image("logo.png", dim=(100, 100))  # Replace with your logo path
 title = Text("Company Sales Report", font_size=28, bold=True)
 subtitle = Text("Quarterly Overview", font_size=22, italic=True)
 
@@ -71,108 +112,88 @@ ax.set_title("Total Sales Over Months")
 ax.set_xlabel("Month")
 ax.set_ylabel("Total Sales ($)")
 plot = Plot(fig)
+```
 
-# Report Layout
+#### Step 3: Assemble the Report Layout
+
+```python
 layout = [
-    # Cover Page Section
-    [
-        logo,
-        title,
-        subtitle
-    ],
-    # Sales Data Section
-    [
-        Text("Overall Sales Data", font_size=24, bold=True),
-        table
-    ],
-    # Sales Trend Section
-    [
-        Text("Sales Trend", font_size=24, bold=True),
-        plot
-    ]
+    [logo, title, subtitle],  # Cover Page
+    [Text("Overall Sales Data", font_size=24, bold=True), table],  # Sales Data Section
+    [Text("Sales Trend", font_size=24, bold=True), plot]  # Sales Trend Section
 ]
+```
 
-# Create and Render Report
+#### Step 4: Create and Render the Report
+
+```python
 report = Report(layout)
 report_engine = ReportEngine(report)
 rendered_report = report_engine.run()
 rendered_report.save("static_sales_report.pdf")
 ```
+    
 
-This static report provides an overview of the company's sales across all regions and months. It includes:
+---
 
-- A **cover page** with the company logo and report title.
-- A **sales data table** showing detailed sales figures.
-- A **sales trend plot** visualizing total sales over the months.
+### Creating a Dynamic Report
 
-### Dynamic Report Engine
-
-Now, we'll enhance the report by making it dynamic. We'll introduce configurations that allow us to generate customized reports based on user input, such as selecting specific regions and months.
+Now, we'll enhance the report to make it dynamic, allowing customization based on user input.
 
 #### Step 1: Define the Configuration Model
 
-We use a Pydantic model to define the configuration schema and include validators to ensure valid input.
+We'll use Pydantic to define a configuration schema:
 
 ```python
 from pydantic import BaseModel, Field, validator
 
 class ReportConfig(BaseModel):
-    regions: list = Field(default=[], description="List of regions to include in the report")
-    months: list = Field(default=[], description="List of months to include in the report")
+    regions: list[str] = Field(..., description="List of regions to include")
+    months: list[str] = Field(..., description="List of months to include")
     include_profit: bool = Field(default=False, description="Include profit data in the report")
 
     @validator("regions", each_item=True)
-    def validate_regions(cls, value):
-        valid_regions = df["Region"].unique()
-        if value not in valid_regions:
-            raise ValueError(f"Region '{value}' does not exist.")
+    def validate_region(cls, value):
+        if value not in df["Region"].unique():
+            raise ValueError(f"Invalid region: {value}")
         return value
 
     @validator("months", each_item=True)
-    def validate_months(cls, value):
-        valid_months = df["Month"].unique()
-        if value not in valid_months:
-            raise ValueError(f"Month '{value}' is not valid.")
-        return value
-
-    @validator("regions", "months")
-    def validate_not_empty(cls, value, field):
-        if not value:
-            raise ValueError(f"{field.name.capitalize()} list cannot be empty.")
+    def validate_month(cls, value):
+        if value not in df["Month"].unique():
+            raise ValueError(f"Invalid month: {value}")
         return value
 ```
 
 #### Step 2: Create Dynamic Elements
 
-We define functions that generate report elements based on the configuration.
+Define functions that generate report elements based on the configuration:
 
 ```python
 def dynamic_title(config):
     regions = ', '.join(config.regions)
-    return Text(f"Sales Report for {regions} Region(s)", font_size=28, bold=True)
+    return Text(f"Sales Report for {regions}", font_size=28, bold=True)
 
 def dynamic_subtitle(config):
     months = ', '.join(config.months)
     return Text(f"Months: {months}", font_size=22, italic=True)
 
 def dynamic_table(config):
-    # Filter data based on configuration
-    filtered_data = df[
-        df["Region"].isin(config.regions) &
-        df["Month"].isin(config.months)
-    ].copy()
-    if not config.include_profit:
-        filtered_data = filtered_data.drop(columns=["Profit"])
-    return Table(filtered_data.reset_index(drop=True))
-
-def dynamic_plot(config):
-    # Aggregate data for the plot
     filtered_data = df[
         df["Region"].isin(config.regions) &
         df["Month"].isin(config.months)
     ]
-    sales_by_month = filtered_data.groupby("Month")["Total Sales"].sum().reindex(config.months)
-    # Create plot
+    if not config.include_profit:
+        filtered_data = filtered_data.drop(columns=["Profit"])
+    return Table(filtered_data.reset_index(drop=True))
+    
+
+def dynamic_plot(config):
+    filtered_data = df[
+        df["Region"].isin(config.regions) &
+        df["Month"].isin(config.months)
+    ]
+    sales_by_month = filtered_data.groupby("Month")["Total Sales"].sum()
     fig, ax = plt.subplots()
     ax.plot(sales_by_month.index, sales_by_month.values, marker='o', color='green')
     ax.set_title("Total Sales Over Selected Months")
@@ -180,98 +201,67 @@ def dynamic_plot(config):
     ax.set_ylabel("Total Sales ($)")
     return Plot(fig)
 
-def profit_section(config):
+def profit_summary(config):
     if config.include_profit:
         total_profit = df[
             df["Region"].isin(config.regions) &
             df["Month"].isin(config.months)
         ]["Profit"].sum()
         profit_text = Text(f"Total Profit: ${total_profit:,.2f}", font_size=18, bold=True)
-        return [
-            Text("Profit Summary", font_size=24, bold=True),
-            profit_text
-        ]
+        return [Text("Profit Summary", font_size=24, bold=True), profit_text]
     return []
 ```
 
-#### Step 3: Define the Dynamic Layout
-
-We create a layout function that builds the report layout based on the configuration.
+#### Step 3: Assemble the Dynamic Layout
 
 ```python
-def report_layout(config):
+def dynamic_layout(config):
     layout = [
-        # Cover Page Section
-        [
-            logo,
-            dynamic_title,
-            dynamic_subtitle
-        ],
-        # Sales Data Section
-        [
-            Text("Filtered Sales Data", font_size=24, bold=True),
-            dynamic_table
-        ],
-        # Sales Trend Section
-        [
-            Text("Sales Trend", font_size=24, bold=True),
-            dynamic_plot
-        ]
+        [logo, dynamic_title(config), dynamic_subtitle(config)],
+        [Text("Filtered Sales Data", font_size=24, bold=True), dynamic_table(config)],
+        [Text("Sales Trend", font_size=24, bold=True), dynamic_plot(config)]
     ]
-    # Add Profit Section if requested
-    profit = profit_section(config)
-    if profit:
-        layout.append(profit)
+    if config.include_profit:
+        layout.append(profit_summary(config))
     return layout
 ```
 
 #### Step 4: Generate Reports with Different Configurations
 
-Now, we can generate customized reports by passing different configurations.
+We can now generate both a master report and individual reports for each region:
 
 ```python
-# Create a report instance
-report = Report(report_layout)
-
-# Initialize the report engine
+report = Report(dynamic_layout)
 report_engine = ReportEngine(report, config_model=ReportConfig)
 
-# Configuration 1: Report for North and East regions for January and February, including profit
-config1 = {
-    "regions": ["North", "East"],
-    "months": ["January", "February"],
-    "include_profit": True
-}
+regions = list(df["Region"].unique())
+months = list(df["Month"].unique())
 
-# Generate and save the report
-rendered_report1 = report_engine.run(config1)
-rendered_report1.save("dynamic_report_north_east.pdf")
+# Generate individual reports for each region
+for region in regions:
+    config = ReportConfig(regions=[region], months=months, include_profit=False)
+    rendered_report = report_engine.run(config)
+    rendered_report.save(f"dynamic_report_{region}.pdf")
 
-# Configuration 2: Report for all regions for March, excluding profit
-config2 = {
-    "regions": ["North", "South", "East", "West"],
-    "months": ["March"],
-    "include_profit": False
-}
-
-rendered_report2 = report_engine.run(config2)
-rendered_report2.save("dynamic_report_march_all_regions.pdf")
+# Generate master report with all regions and profit included
+master_config = ReportConfig(regions=regions, months=months, include_profit=True)
+rendered_report = report_engine.run(master_config)
+rendered_report.save("dynamic_report_master.pdf")
 ```
 
-#### Step 5: Handling Invalid Configurations
+    
 
-The validators in the `ReportConfig` model ensure that invalid configurations are caught before generating the report.
+#### Step 5: Handle Invalid Configurations
+
+Validators ensure invalid inputs are caught:
 
 ```python
-# Invalid Configuration: Empty regions list
-invalid_config = {
-    "regions": [],
-    "months": ["January", "February"],
-    "include_profit": False
-}
+# Attempt to generate a report with an invalid month
+invalid_months = months + ["April"]  # Adding an invalid month
 
 try:
-    rendered_report_invalid = report_engine.run(invalid_config)
+    invalid_config = ReportConfig(regions=["North"], months=invalid_months, include_profit=True)
+    report_engine.run(invalid_config)
 except ValueError as e:
     print(f"Validation Error: {e}")
 ```
@@ -279,21 +269,14 @@ except ValueError as e:
 Output:
 
 ```
-Validation Error: Regions list cannot be empty.
+Validation Error: Invalid month: April
 ```
 
-### Explanation of Dynamic Enhancements
-
-In the dynamic report, we've added the following features to make it dynamic:
-
-- **Configurable Data Selection:** Users can select specific regions and months for the report.
-- **Dynamic Elements:** The title, subtitle, table, and plot adjust based on the configuration.
-- **Conditional Content:** The profit column is included in the table and a profit summary section is added only if `include_profit` is `True`.
-- **Input Validation:** Validators ensure that the provided regions and months are valid and not empty.
+---
 
 ### Summary
 
-By building upon the static report, we've demonstrated how to use *QuackReports* to create flexible and customizable reports that adapt to different user requirements. The scenario carries through the entire README, showing how you can start with a basic report and enhance it with dynamic features.
+By transforming a static report into a dynamic one, we've demonstrated how **QuackReports** allows you to create flexible and customizable reports. The dynamic report adjusts its content based on user-defined configurations, making it a powerful tool for generating tailored reports.
 
 ## Documentation
 
